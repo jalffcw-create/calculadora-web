@@ -13,6 +13,14 @@
     min-height: 100vh;
     background: #0d0d0d;
     font-family: -apple-system, Helvetica, Arial, sans-serif;
+    padding: 20px;
+  }
+  .app {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .calc {
     width: 320px;
@@ -50,60 +58,178 @@
   .gris { background: #a5a5a5; color: #000; }
   .naranja { background: #ff9500; }
   .cero { grid-column: span 2; border-radius: 34px; text-align: left; padding-left: 28px; }
+
+  /* Panel de historial */
+  .historial {
+    width: 300px;
+    background: #1e1e1e;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+  }
+  .historial h2 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .estado { font-size: 12px; color: #888; margin-bottom: 12px; min-height: 16px; }
+  .limpiar {
+    background: none;
+    border: none;
+    color: #ff9500;
+    font-size: 13px;
+    cursor: pointer;
+    height: auto;
+    width: auto;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+  .lista {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .item {
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .item:hover { background: #383838; }
+  .item .expr { color: #999; font-size: 14px; }
+  .item .res { color: #fff; font-size: 22px; font-weight: 400; }
+  .item .fecha { color: #666; font-size: 11px; margin-top: 2px; }
+  .vacio { color: #666; font-size: 14px; text-align: center; padding: 20px 0; }
+  .lista::-webkit-scrollbar { width: 6px; }
+  .lista::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
 </style>
 </head>
 <body>
-  <div class="calc">
-    <div class="pantalla" id="pantalla">0</div>
-    <div class="grid">
-      <button class="gris" data-val="C">C</button>
-      <button class="gris" data-val="back">⌫</button>
-      <button class="gris" data-val="%">%</button>
-      <button class="naranja" data-val="/">÷</button>
+  <div class="app">
+    <div class="calc">
+      <div class="pantalla" id="pantalla">0</div>
+      <div class="grid">
+        <button class="gris" data-val="C">C</button>
+        <button class="gris" data-val="back">⌫</button>
+        <button class="gris" data-val="%">%</button>
+        <button class="naranja" data-val="/">÷</button>
 
-      <button data-val="7">7</button>
-      <button data-val="8">8</button>
-      <button data-val="9">9</button>
-      <button class="naranja" data-val="*">×</button>
+        <button data-val="7">7</button>
+        <button data-val="8">8</button>
+        <button data-val="9">9</button>
+        <button class="naranja" data-val="*">×</button>
 
-      <button data-val="4">4</button>
-      <button data-val="5">5</button>
-      <button data-val="6">6</button>
-      <button class="naranja" data-val="-">−</button>
+        <button data-val="4">4</button>
+        <button data-val="5">5</button>
+        <button data-val="6">6</button>
+        <button class="naranja" data-val="-">−</button>
 
-      <button data-val="1">1</button>
-      <button data-val="2">2</button>
-      <button data-val="3">3</button>
-      <button class="naranja" data-val="+">+</button>
+        <button data-val="1">1</button>
+        <button data-val="2">2</button>
+        <button data-val="3">3</button>
+        <button class="naranja" data-val="+">+</button>
 
-      <button class="cero" data-val="0">0</button>
-      <button data-val=".">.</button>
-      <button class="naranja" data-val="=">=</button>
+        <button class="cero" data-val="0">0</button>
+        <button data-val=".">.</button>
+        <button class="naranja" data-val="=">=</button>
+      </div>
+    </div>
+
+    <div class="historial">
+      <h2>Historial <button class="limpiar" id="limpiar">Vaciar</button></h2>
+      <div class="estado" id="estado">Conectando…</div>
+      <div class="lista" id="lista"></div>
     </div>
   </div>
 
-<script>
+<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+  const SUPABASE_URL = "https://zycxahpuuukdeybanifd.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_M1kbbgTJaUhoXFLtjSrCjA_nf9bpSQb";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const pantalla = document.getElementById("pantalla");
+  const lista = document.getElementById("lista");
+  const estado = document.getElementById("estado");
   let expr = "";
 
   function actualizar() {
     pantalla.textContent = expr === "" ? "0" : expr;
   }
 
+  function formatearFecha(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function pintarHistorial(filas) {
+    if (!filas || filas.length === 0) {
+      lista.innerHTML = '<div class="vacio">Aún no hay cálculos</div>';
+      return;
+    }
+    lista.innerHTML = filas.map(f => `
+      <div class="item" data-res="${f.resultado}">
+        <div class="expr">${f.expresion} =</div>
+        <div class="res">${f.resultado}</div>
+        <div class="fecha">${formatearFecha(f.creado_en)}</div>
+      </div>
+    `).join("");
+    lista.querySelectorAll(".item").forEach(el =>
+      el.addEventListener("click", () => { expr = el.dataset.res; actualizar(); })
+    );
+  }
+
+  async function cargarHistorial() {
+    const { data, error } = await supabase
+      .from("historial")
+      .select("*")
+      .order("creado_en", { ascending: false })
+      .limit(50);
+    if (error) { estado.textContent = "⚠️ Error al cargar: " + error.message; return; }
+    estado.textContent = `${data.length} cálculo(s) guardado(s)`;
+    pintarHistorial(data);
+  }
+
+  async function guardar(expresion, resultado) {
+    const { error } = await supabase
+      .from("historial")
+      .insert({ expresion, resultado: String(resultado) });
+    if (error) { estado.textContent = "⚠️ Error al guardar: " + error.message; return; }
+    await cargarHistorial();
+  }
+
+  async function vaciarHistorial() {
+    if (!confirm("¿Vaciar todo el historial? Esto borra los datos de la base de datos.")) return;
+    const { error } = await supabase.from("historial").delete().neq("id", 0);
+    if (error) { estado.textContent = "⚠️ Error al vaciar: " + error.message; return; }
+    await cargarHistorial();
+  }
+
   function calcular() {
     try {
-      // Solo permitimos números y operadores básicos
       if (!/^[0-9+\-*/.%() ]+$/.test(expr)) throw new Error();
       let r = Function('"use strict"; return (' + expr + ')')();
       if (!isFinite(r)) { pantalla.textContent = "Error: ÷ 0"; expr = ""; return; }
-      r = Math.round(r * 1e10) / 1e10; // evita 0.30000000004
+      r = Math.round(r * 1e10) / 1e10;
+      const expresion = expr;
       expr = String(r);
+      actualizar();
+      guardar(expresion, r);
     } catch {
       pantalla.textContent = "Error";
       expr = "";
-      return;
     }
-    actualizar();
   }
 
   function pulsar(val) {
@@ -114,17 +240,19 @@
     actualizar();
   }
 
-  document.querySelectorAll("button").forEach(b =>
+  document.querySelectorAll(".grid button").forEach(b =>
     b.addEventListener("click", () => pulsar(b.dataset.val))
   );
+  document.getElementById("limpiar").addEventListener("click", vaciarHistorial);
 
-  // Soporte de teclado
   document.addEventListener("keydown", e => {
     if (/[0-9+\-*/.%]/.test(e.key)) pulsar(e.key);
     else if (e.key === "Enter" || e.key === "=") pulsar("=");
     else if (e.key === "Backspace") pulsar("back");
     else if (e.key === "Escape") pulsar("C");
   });
+
+  cargarHistorial();
 </script>
 </body>
 </html>
