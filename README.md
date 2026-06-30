@@ -4,10 +4,12 @@ Una calculadora básica con interfaz gráfica que funciona en el navegador. Sin 
 
 ## Uso
 
-Abre `calculadora.html` en cualquier navegador (doble clic) o:
+Ábrela online en **https://jalffcw-create.github.io/calculadora-web/**
+
+O abre `index.html` en cualquier navegador (doble clic) o:
 
 ```bash
-open calculadora.html
+open index.html
 ```
 
 ## Funciones
