@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #0d0d0d;
+    font-family: -apple-system, Helvetica, Arial, sans-serif;
+  }
+  .calc {
+    width: 320px;
+    background: #1e1e1e;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .pantalla {
+    color: #fff;
+    font-size: 56px;
+    font-weight: 300;
+    text-align: right;
+    padding: 24px 12px;
+    min-height: 110px;
+    word-break: break-all;
+    line-height: 1.1;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  button {
+    border: none;
+    border-radius: 50%;
+    height: 68px;
+    font-size: 28px;
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.15s;
+    background: #333;
+  }
+  button:active { filter: brightness(1.4); }
+  .gris { background: #a5a5a5; color: #000; }
+  .naranja { background: #ff9500; }
+  .cero { grid-column: span 2; border-radius: 34px; text-align: left; padding-left: 28px; }
+</style>
+</head>
+<body>
+  <div class="calc">
+    <div class="pantalla" id="pantalla">0</div>
+    <div class="grid">
+      <button class="gris" data-val="C">C</button>
+      <button class="gris" data-val="back">⌫</button>
+      <button class="gris" data-val="%">%</button>
+      <button class="naranja" data-val="/">÷</button>
+
+      <button data-val="7">7</button>
+      <button data-val="8">8</button>
+      <button data-val="9">9</button>
+      <button class="naranja" data-val="*">×</button>
+
+      <button data-val="4">4</button>
+      <button data-val="5">5</button>
+      <button data-val="6">6</button>
+      <button class="naranja" data-val="-">−</button>
+
+      <button data-val="1">1</button>
+      <button data-val="2">2</button>
+      <button data-val="3">3</button>
+      <button class="naranja" data-val="+">+</button>
+
+      <button class="cero" data-val="0">0</button>
+      <button data-val=".">.</button>
+      <button class="naranja" data-val="=">=</button>
+    </div>
+  </div>
+
+<script>
+  const pantalla = document.getElementById("pantalla");
+  let expr = "";
+
+  function actualizar() {
+    pantalla.textContent = expr === "" ? "0" : expr;
+  }
+
+  function calcular() {
+    try {
+      // Solo permitimos números y operadores básicos
+      if (!/^[0-9+\-*/.%() ]+$/.test(expr)) throw new Error();
+      let r = Function('"use strict"; return (' + expr + ')')();
+      if (!isFinite(r)) { pantalla.textContent = "Error: ÷ 0"; expr = ""; return; }
+      r = Math.round(r * 1e10) / 1e10; // evita 0.30000000004
+      expr = String(r);
+    } catch {
+      pantalla.textContent = "Error";
+      expr = "";
+      return;
+    }
+    actualizar();
+  }
+
+  function pulsar(val) {
+    if (val === "C") expr = "";
+    else if (val === "back") expr = expr.slice(0, -1);
+    else if (val === "=") return calcular();
+    else expr += val;
+    actualizar();
+  }
+
+  document.querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => pulsar(b.dataset.val))
+  );
+
+  // Soporte de teclado
+  document.addEventListener("keydown", e => {
+    if (/[0-9+\-*/.%]/.test(e.key)) pulsar(e.key);
+    else if (e.key === "Enter" || e.key === "=") pulsar("=");
+    else if (e.key === "Backspace") pulsar("back");
+    else if (e.key === "Escape") pulsar("C");
+  });
+</script>
+</body>
+</html>
